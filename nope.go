@@ -15,13 +15,14 @@ import (
 	"os"
 	"time"
 
+	gcolor "github.com/bthomson/go-color"
 	"github.com/golang/freetype"
 )
 
 const (
 	width  = 160
 	height = 96
-	size   = 50
+	size   = 24
 	dpi    = 72
 )
 
@@ -50,14 +51,14 @@ func main() {
 	count := 0
 	l := NewLife(width, height)
 	for {
-		if count%60 == 0 {
+		if count%10 == 0 {
 			count = 0
-			pt := freetype.Pt(10, 10+int(c.PointToFix32(size)>>8))
+			pt := freetype.Pt(rand.Intn(width-width/4), height/4+rand.Intn(height-height/4))
 			c.DrawString("NOPE", pt)
 			for x := 0; x < width; x++ {
 				for y := 0; y < height; y++ {
 					c := rgba.RGBAAt(x, y)
-					l.a.Set(x, y, c.R > 0)
+					l.a.Set(x, y, c.R > 0 || c.B > 0 || c.G > 0)
 				}
 			}
 		}
@@ -65,9 +66,9 @@ func main() {
 
 		for x := 0; x < width; x++ {
 			for y := 0; y < height; y++ {
-				c := color.Black
+				var c color.Color = color.Black
 				if l.a.Alive(x, y) {
-					c = color.White
+					c = rainbow(y)
 				}
 				rgba.Set(x, y, c)
 			}
@@ -77,7 +78,17 @@ func main() {
 		sendImage(rgba)
 		l.Step()
 
-		time.Sleep(time.Second / 2)
+		time.Sleep(time.Second / 8)
+	}
+}
+
+func rainbow(y int) color.Color {
+	h := float64(y) / float64(height)
+	rgb := gcolor.HSL{H: h, S: 1, L: 0.5}.ToRGB()
+	return color.RGBA{
+		R: byte(rgb.R * 255),
+		G: byte(rgb.G * 255),
+		B: byte(rgb.B * 255),
 	}
 }
 
@@ -119,9 +130,7 @@ func sendImage(m *image.RGBA) {
 			buf.WriteByte(c.B)
 		}
 	}
-	for i := 0; i < 20; i++ {
-		c.Write(buf.Bytes())
-	}
+	c.Write(buf.Bytes())
 }
 
 // An implementation of Conway's Game of Life.
